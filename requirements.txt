@@ -1,0 +1,8 @@
+streamlit
+numpy~=2.4.4
+pandas
+requests
+plotly
+seaborn
+os
+kaggle
