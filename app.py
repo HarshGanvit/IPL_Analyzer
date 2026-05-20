@@ -93,7 +93,7 @@ if available_options in single_player_options:
             if data is None:
                 st.error("No Data Available")
             else:
-                st.error
+                
                 st.write(runs)
 
                 #batter year - year performance
