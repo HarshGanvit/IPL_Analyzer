@@ -93,7 +93,7 @@ if available_options in single_player_options:
             if data is None:
                 st.error("No Data Available")
             else:
-                
+
                 st.write(runs)
 
                 #batter year - year performance
@@ -236,3 +236,9 @@ else:
                 d1 = data1.groupby('match_won_by')['match_id'].count().reset_index()
 
                 bar_plot(x='match_won_by',y='match_id',title1='Trophies won by {} and {}'.format(team1,team2),df1=d1)
+st.write("Enter feedback")
+text = st.chat_input()
+btn1 = st.button('Send feedback')
+if btn1 and text:
+    with open('feedback.txt','a') as f:
+        f.write(text)
