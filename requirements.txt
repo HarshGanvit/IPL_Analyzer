@@ -1,8 +1,7 @@
 streamlit
-numpy~=2.4.4
+numpy
 pandas
-requests
+
 plotly
 seaborn
-os
-kaggle
+
