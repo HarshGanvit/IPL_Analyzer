@@ -6,7 +6,7 @@ import streamlit as st
 
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_data():
     zip_path = 'Dataset.zip'
     csv_filename = 'IPL.csv'
