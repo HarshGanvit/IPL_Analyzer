@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import numpy as np
+from plotly import colors
 
 from streamlit.elements.widgets import selectbox
 
@@ -45,9 +46,7 @@ def pie_plot(labels,values,title1,df1):
 
 def bar_plot(x,y,title1,df1):
     df1 = pd.DataFrame(df1)
-    trace  =go.Bar(x=df1[x],y=df1[y],
-
-        )
+    trace  =go.Bar(x=df1[x],y=df1[y],text=df1[y],textposition='auto')
     data = [trace]
     layout = go.Layout(title=title1)
     fig = go.Figure(data =data,layout=layout )
@@ -99,7 +98,6 @@ if available_options in single_player_options:
                 #batter year - year performance
                 year_d= data.groupby('year')['runs_batter'].sum().reset_index()
                 line_plot('year','runs_batter','{} year - year performance'.format(name),year_d)
-
                 #batter wickets kind
                 out = data[data['wicket_kind'].notna() ].reset_index()
                 outs = out['wicket_kind'].unique()
@@ -118,7 +116,20 @@ if available_options in single_player_options:
                 #batter vs all teams
                 d3 = data.groupby('bowling_team')['runs_batter'].sum().reset_index()
                 bar_plot('bowling_team', 'runs_batter', '{} Runs vs teams'.format(name), d3)
-
+                #phase wise runs
+                powerplay = data[data['over'] < 6]
+                middleovers = data[(data['over'] >= 6) & (data['over'] > 15)]
+                deathovers = data[(data['over'] >= 15) & (data['over'] < 20)]
+                powerplay_runs = powerplay.groupby('batter')['runs_batter'].sum().reset_index()
+                middleovers_runs =  middleovers.groupby('batter')['runs_batter'].sum().reset_index()
+                deathovers_runs =  deathovers.groupby('batter')['runs_batter'].sum().reset_index()
+                trace1 = go.Bar(x=powerplay_runs['batter'], y=powerplay_runs['runs_batter'],name='Powerplay',text=powerplay_runs['runs_batter'],textposition='auto',textfont_size=20)
+                trace2 = go.Bar(x=powerplay_runs['batter'], y=middleovers_runs['runs_batter'],name ='Middle overs',text=middleovers_runs['runs_batter'],textposition='auto',textfont_size=20)
+                trace3 = go.Bar(x=powerplay_runs['batter'], y=deathovers_runs['runs_batter'],name='Death overs',text=deathovers_runs['runs_batter'],textposition='auto',textfont_size=20)
+                data1 = [trace1,trace2,trace3]
+                layout = go.Layout(title='Phase wise Runs')
+                fig = go.Figure(data=data1, layout=layout)
+                st.plotly_chart(fig)
 
         elif available_options == 'Bowler Analysis':
             data,w = obj.bowler_overall_wicket(name)
@@ -156,6 +167,21 @@ if available_options in single_player_options:
                 #wickets vs teams
                 d3 = w.groupby('batting_team')['over'].count().reset_index()
                 bar_plot('batting_team', 'over', '{} wickets vs teams'.format(name), d3)
+
+                #phasewise wickets
+                powerplay = w[w['over'] < 6]
+                middleovers = w[(w['over'] >= 6) & (w['over'] < 15)]
+                deathovers = w[(w['over'] >= 15) & (w['over'] < 20)]
+                powerplay_runs = powerplay.groupby('bowler')['over'].count().reset_index()
+                middleovers_runs = middleovers.groupby('bowler')['over'].count().reset_index()
+                deathovers_runs = deathovers.groupby('bowler')['over'].count().reset_index()
+                trace1 = go.Bar(x=powerplay_runs['bowler'], y=powerplay_runs['over'], name='Powerplay',text=powerplay_runs['over'],textposition='auto',textfont_size=20)
+                trace2 = go.Bar(x=powerplay_runs['bowler'], y=middleovers_runs['over'], name='Middle overs',text=middleovers_runs['over'],textposition='auto',textfont_size=20)
+                trace3 = go.Bar(x=powerplay_runs['bowler'], y=deathovers_runs['over'], name='Death overs',text=deathovers_runs['over'],textposition='auto',textfont_size=20)
+                data1 = [trace1, trace2, trace3]
+                layout = go.Layout(title='Phase wise wickets',barmode='group')
+                fig = go.Figure(data=data1, layout=layout)
+                st.plotly_chart(fig)
 
 
 else:
