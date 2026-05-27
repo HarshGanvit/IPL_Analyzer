@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pickle
 
-
+import sklearn
 import zipfile
 
 
@@ -78,7 +78,100 @@ single_player_options = [
 
 models = st.sidebar.selectbox('Select', ['WIN Predictor','Data Analysis'])
 if models == 'WIN Predictor':
-    
+    @st.cache_resource
+    def load_model():
+        with open('pipe3.pkl', 'rb') as f:
+            return pickle.load(f)
+
+
+    pipe = load_model()
+    teams = [
+        'Kolkata Knight Riders', 'Chennai Super Kings', 'Punjab Kings', 'Rajasthan Royals', 'Sunrisers Hyderabad',
+        'Delhi Capitals', 'Lucknow Super Giants', 'Gujarat Titans', 'Royal Challengers Bengaluru', 'Mumbai Indians'
+    ]
+    venue = ['Arun Jaitley Stadium',
+ 'Barabati Stadium',
+ 'Barsapara Cricket Stadium, Guwahati',
+ 'Bharat Ratna Shri Atal Bihari Vajpayee Ekana Cricket Stadium, Lucknow',
+ 'Brabourne Stadium',
+ 'Buffalo Park',
+ 'De Beers Diamond Oval',
+ 'Dr DY Patil Sports Academy',
+ 'Dr. Y.S. Rajasekhara Reddy ACA-VDCA Cricket Stadium',
+ 'Dubai International Cricket Stadium',
+ 'Eden Gardens',
+ 'Green Park',
+ 'Himachal Pradesh Cricket Association Stadium',
+ 'Holkar Cricket Stadium',
+ 'JSCA International Stadium Complex',
+ 'Kingsmead',
+ 'M Chinnaswamy Stadium',
+ 'MA Chidambaram Stadium',
+ 'Maharaja Yadavindra Singh International Cricket Stadium, Mullanpur',
+ 'Maharashtra Cricket Association Stadium',
+ 'Narendra Modi Stadium',
+ 'Nehru Stadium',
+ 'New Wanderers Stadium',
+ 'Newlands',
+ 'OUTsurance Oval',
+ 'Punjab Cricket Association IS Bindra Stadium',
+ 'Rajiv Gandhi International Stadium',
+ 'Saurashtra Cricket Association Stadium',
+ 'Sawai Mansingh Stadium',
+ 'Shaheed Veer Narayan Singh International Stadium',
+ 'Sharjah Cricket Stadium',
+ 'Sheikh Zayed Stadium',
+ "St George's Park",
+ 'Subrata Roy Sahara Stadium',
+ 'SuperSport Park',
+ 'Vidarbha Cricket Association Stadium, Jamtha',
+ 'Wankhede Stadium',
+ 'Zayed Cricket Stadium, Abu Dhabi']
+    col1, col2 = st.columns(2)
+    with col1:
+        team1 = st.selectbox('Batting Team',sorted(teams))
+    with col2:
+        team2 = st.selectbox('Bowling Team',sorted(teams))
+
+    if team1 == team2:
+        st.error("Choose Different Teams")
+    city = st.selectbox('Select Venue',sorted(venue))
+    target = st.number_input('Target',step=1)
+    col3, col4 ,col5,col6= st.columns(4)
+    with col3:
+        score = st.number_input('Score',step=1)
+    with col4:
+        overs = st.number_input('Overs Bowled',step=1,max_value=20,min_value=1)
+    with col5:
+        balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=0)
+    with col6:
+        wickets = st.number_input('Wickets',step=1,max_value=10,min_value=0)
+
+    btn = st.button('Prediction Win % ')
+    if btn:
+        runs_left = target - score
+        wickets_left = 10 - wickets
+        balls_left = (120 - (overs* 6) - balls)
+        crr =  (score * 6)/ (120 -balls_left)
+        rrr = (runs_left*6) / balls_left
+
+        data = pd.DataFrame(
+            {
+                'batting_team':[team1],
+                'bowling_team':[team2],
+                'venue':[city],
+                'target score':[target],
+                'Runs Remaining':[runs_left],
+                'balls remaining':[balls_left],
+                'wickets_left':[wickets_left],
+                'crr':[crr],
+                'rrr':[rrr]
+             }
+        )
+
+        result = pipe.predict_proba(data)
+        st.write("{}- {}%".format(team1,round(result[0][0] *100,2) ))
+        st.write("{}- {}%".format(team2, round(result[0][1] * 100,2) ))
 else:
 
     available_options = st.sidebar.selectbox('Select', options)
