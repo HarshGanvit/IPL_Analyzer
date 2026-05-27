@@ -78,7 +78,7 @@ single_player_options = [
 
 models = st.sidebar.selectbox('Select', ['WIN Predictor','Data Analysis'])
 if models == 'WIN Predictor':
-    @st.cache_resource
+    @st.cache_resource(show_spinner=False)
     def load_model():
         with open('pipe3.pkl', 'rb') as f:
             return pickle.load(f)
@@ -136,42 +136,56 @@ if models == 'WIN Predictor':
     if team1 == team2:
         st.error("Choose Different Teams")
     city = st.selectbox('Select Venue',sorted(venue))
-    target = st.number_input('Target',step=1)
+    target = st.number_input('Target',step=1,min_value=0)
     col3, col4 ,col5,col6= st.columns(4)
     with col3:
-        score = st.number_input('Score',step=1)
+        score = st.number_input('Score',step=1,min_value=0)
     with col4:
         overs = st.number_input('Overs Bowled',step=1,max_value=19,min_value=0)
     with col5:
-        balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=0)
+        balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=1)
     with col6:
         wickets = st.number_input('Wickets',step=1,max_value=10,min_value=0)
 
     btn = st.button('Prediction Win % ')
     if btn:
-        runs_left = target - score
-        wickets_left = 10 - wickets
-        balls_left = (120 - (overs* 6) - balls)
-        crr =  (score * 6)/ (120 -balls_left)
-        rrr = (runs_left*6) / balls_left
+        if team1 == team2:
+            st.error("Choose Different Teams")
+        elif target == 0:
+            st.error("Target Score is 0")
+        elif (target-1== score) & (overs == 19) & (balls == 6) :
+            st.success("Match is tied")
+        elif target <= score :
+            st.success("Match is won by {}".format(team1))
+        elif wickets == 10:
+            st.success("Match is won by {}".format(team2))
+        else:
+            runs_left = target - score
+            wickets_left = 10 - wickets
+            balls_left = (120 - (overs* 6) - balls)
+            crr =  (score * 6)/ (120 -balls_left)
+            rrr = (runs_left*6) / balls_left
 
-        data = pd.DataFrame(
-            {
-                'batting_team':[team1],
-                'bowling_team':[team2],
-                'venue':[city],
-                'target score':[target],
-                'Runs Remaining':[runs_left],
-                'balls remaining':[balls_left],
-                'wickets_left':[wickets_left],
-                'crr':[crr],
-                'rrr':[rrr]
-             }
-        )
+            data = pd.DataFrame(
+                {
+                    'batting_team':[team1],
+                    'bowling_team':[team2],
+                    'venue':[city],
+                    'target score':[target],
+                    'Runs Remaining':[runs_left],
+                    'balls remaining':[balls_left],
+                    'wickets_left':[wickets_left],
+                    'crr':[crr],
+                    'rrr':[rrr]
+                 }
+            )
 
-        result = pipe.predict_proba(data)
-        st.write("{}- {}%".format(team1,round(result[0][1] *100,2) ))
-        st.write("{}- {}%".format(team2, round(result[0][0] * 100,2) ))
+            result = pipe.predict_proba(data)
+            if rrr > 36:
+                st.success("Match is won by {}".format(team1))
+            else:
+                st.write("{}- {}%".format(team1,round(result[0][1] *100,2) ))
+                st.write("{}- {}%".format(team2, round(result[0][0] * 100,2) ))
 else:
 
     available_options = st.sidebar.selectbox('Select', options)
@@ -324,6 +338,8 @@ else:
         elif available_options == 'Team1 vs Team2':
             team1 = st.selectbox('Select team1', teams)
             team2 = st.selectbox('Select team2', teams)
+            if team1 == team2:
+                st.error("Choose Different Teams")
             team1 = str(team1)
             team2 = str(team2)
             btn = st.button('Start Analyzing')
