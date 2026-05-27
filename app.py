@@ -141,7 +141,7 @@ if models == 'WIN Predictor':
     with col3:
         score = st.number_input('Score',step=1)
     with col4:
-        overs = st.number_input('Overs Bowled',step=1,max_value=20,min_value=1)
+        overs = st.number_input('Overs Bowled',step=1,max_value=19,min_value=0)
     with col5:
         balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=0)
     with col6:
@@ -170,8 +170,8 @@ if models == 'WIN Predictor':
         )
 
         result = pipe.predict_proba(data)
-        st.write("{}- {}%".format(team1,round(result[0][0] *100,2) ))
-        st.write("{}- {}%".format(team2, round(result[0][1] * 100,2) ))
+        st.write("{}- {}%".format(team1,round(result[0][1] *100,2) ))
+        st.write("{}- {}%".format(team2, round(result[0][0] * 100,2) ))
 else:
 
     available_options = st.sidebar.selectbox('Select', options)
