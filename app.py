@@ -9,7 +9,7 @@ from logic import ipl
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
-
+import pickle
 
 
 import zipfile
@@ -67,7 +67,6 @@ bowlers = sorted(df['bowler'].dropna().unique())
 
 teams = sorted(df['batting_team'].unique())
 
-available_options = st.sidebar.selectbox('Select', options)
 
 single_player_options = [
     'Batter Analysis',
@@ -77,194 +76,197 @@ single_player_options = [
 ]
 
 
-
-
-
-if available_options in single_player_options:
-
-    players = sorted(set(batters + bowlers))
-
-    name = st.selectbox('Select Player', players)
-    btn = st.button('Start Analyzing')
-    if btn:
-        if available_options == 'Batter Analysis':
-            runs,data = obj.batter_run_overall(name)
-            if data is None:
-                st.error("No Data Available")
-            else:
-
-                st.write(runs)
-
-                #batter year - year performance
-                year_d= data.groupby('year')['runs_batter'].sum().reset_index()
-                line_plot('year','runs_batter','{} year - year performance'.format(name),year_d)
-                #batter wickets kind
-                out = data[data['wicket_kind'].notna() ].reset_index()
-                outs = out['wicket_kind'].unique()
-                d = data[data['wicket_kind'].isin(outs)].value_counts(data['wicket_kind']).reset_index()
-                pie_plot('wicket_kind', 'count','{} out type'.format(name), d)
-
-                # played for how many teams
-                d2 = data['batting_team'].unique()
-
-                teams_played_for = d2.dropna().unique().tolist()
-                st.write('Played for : \n')
-
-                #POTM won by player
-                st.write(teams_played_for)
-                st.write('Player of the match won: {} POTM'.format(obj.count_player_of_the_match(name)))
-                #batter vs all teams
-                d3 = data.groupby('bowling_team')['runs_batter'].sum().reset_index()
-                bar_plot('bowling_team', 'runs_batter', '{} Runs vs teams'.format(name), d3)
-                #phase wise runs
-                powerplay = data[data['over'] < 6]
-                middleovers = data[(data['over'] >= 6) & (data['over'] > 15)]
-                deathovers = data[(data['over'] >= 15) & (data['over'] < 20)]
-                powerplay_runs = powerplay.groupby('batter')['runs_batter'].sum().reset_index()
-                middleovers_runs =  middleovers.groupby('batter')['runs_batter'].sum().reset_index()
-                deathovers_runs =  deathovers.groupby('batter')['runs_batter'].sum().reset_index()
-                trace1 = go.Bar(x=powerplay_runs['batter'], y=powerplay_runs['runs_batter'],name='Powerplay',text=powerplay_runs['runs_batter'],textposition='auto',textfont_size=20)
-                trace2 = go.Bar(x=powerplay_runs['batter'], y=middleovers_runs['runs_batter'],name ='Middle overs',text=middleovers_runs['runs_batter'],textposition='auto',textfont_size=20)
-                trace3 = go.Bar(x=powerplay_runs['batter'], y=deathovers_runs['runs_batter'],name='Death overs',text=deathovers_runs['runs_batter'],textposition='auto',textfont_size=20)
-                data1 = [trace1,trace2,trace3]
-                layout = go.Layout(title='Phase wise Runs')
-                fig = go.Figure(data=data1, layout=layout)
-                st.plotly_chart(fig)
-
-        elif available_options == 'Bowler Analysis':
-            data,w = obj.bowler_overall_wicket(name)
-            if data is None:
-                st.error("No Data Available")
-            else:
-                #year-year wickets
-                d1 = w.groupby('year')['ball_no'].count().reset_index()
-                # Economy year-year
-
-                d3 = data.groupby('year')['runs_bowler'].sum().reset_index()
-                d4 = data.groupby('year')['over'].count().reset_index()
-                eco = ((d3['runs_bowler'] * 6) / d4['over']).reset_index()
-
-
-                trace1 = go.Scatter(x=d1['year'], y=eco[0],name='Economy')
-                trace2 = go.Scatter(x=d1['year'], y=d1['ball_no'],name='Wickets')
-
-                data1 = [trace1, trace2]
-                fig = go.Figure(data=data1,layout=go.Layout(title='Economy and Wickets year - year'))
-                st.plotly_chart(fig)
-
-                #wicket type
-
-                d2 = w.groupby('wicket_kind')['ball_no'].count().reset_index()
-                pie_plot('wicket_kind','ball_no','{} wickets kind'.format(name),d2)
-
-                #Teams played for
-                d2 = data['bowling_team'].unique()
-                teams_played_for = d2.dropna().unique().tolist()
-                st.write('Played for : \n')
-                st.write(teams_played_for)
-                # POTM Count
-                st.write('Player of the match won: {} POTM'.format(obj.count_player_of_the_match(name)))
-                #wickets vs teams
-                d3 = w.groupby('batting_team')['over'].count().reset_index()
-                bar_plot('batting_team', 'over', '{} wickets vs teams'.format(name), d3)
-
-                #phasewise wickets
-                powerplay = w[w['over'] < 6]
-                middleovers = w[(w['over'] >= 6) & (w['over'] < 15)]
-                deathovers = w[(w['over'] >= 15) & (w['over'] < 20)]
-                powerplay_runs = powerplay.groupby('bowler')['over'].count().reset_index()
-                middleovers_runs = middleovers.groupby('bowler')['over'].count().reset_index()
-                deathovers_runs = deathovers.groupby('bowler')['over'].count().reset_index()
-                trace1 = go.Bar(x=powerplay_runs['bowler'], y=powerplay_runs['over'], name='Powerplay',text=powerplay_runs['over'],textposition='auto',textfont_size=20)
-                trace2 = go.Bar(x=powerplay_runs['bowler'], y=middleovers_runs['over'], name='Middle overs',text=middleovers_runs['over'],textposition='auto',textfont_size=20)
-                trace3 = go.Bar(x=powerplay_runs['bowler'], y=deathovers_runs['over'], name='Death overs',text=deathovers_runs['over'],textposition='auto',textfont_size=20)
-                data1 = [trace1, trace2, trace3]
-                layout = go.Layout(title='Phase wise wickets',barmode='group')
-                fig = go.Figure(data=data1, layout=layout)
-                st.plotly_chart(fig)
-
-
+models = st.sidebar.selectbox('Select', ['WIN Predictor','Data Analysis'])
+if models == 'WIN Predictor':
+    
 else:
 
-    if available_options == 'Batter vs Bowler':
-        batter = st.selectbox('Select Batter', batters)
-        bowler = st.selectbox('Select Bowler', bowlers)
+    available_options = st.sidebar.selectbox('Select', options)
+    if available_options in single_player_options:
+
+        players = sorted(set(batters + bowlers))
+
+        name = st.selectbox('Select Player', players)
         btn = st.button('Start Analyzing')
-        if batter == bowler:
-            st.write("Enter different players")
-        else:
+        if btn:
+            if available_options == 'Batter Analysis':
+                runs,data = obj.batter_run_overall(name)
+                if data is None:
+                    st.error("No Data Available")
+                else:
 
-            data = obj.batter_vs_bowler(batter, bowler)
-            if data is None:
-                st.write("{} has not faced {}".format(batter, bowler))
+                    st.write(runs)
 
+                    #batter year - year performance
+                    year_d= data.groupby('year')['runs_batter'].sum().reset_index()
+                    line_plot('year','runs_batter','{} year - year performance'.format(name),year_d)
+                    #batter wickets kind
+                    out = data[data['wicket_kind'].notna() ].reset_index()
+                    outs = out['wicket_kind'].unique()
+                    d = data[data['wicket_kind'].isin(outs)].value_counts(data['wicket_kind']).reset_index()
+                    pie_plot('wicket_kind', 'count','{} out type'.format(name), d)
+
+                    # played for how many teams
+                    d2 = data['batting_team'].unique()
+
+                    teams_played_for = d2.dropna().unique().tolist()
+                    st.write('Played for : \n')
+
+                    #POTM won by player
+                    st.write(teams_played_for)
+                    st.write('Player of the match won: {} POTM'.format(obj.count_player_of_the_match(name)))
+                    #batter vs all teams
+                    d3 = data.groupby('bowling_team')['runs_batter'].sum().reset_index()
+                    bar_plot('bowling_team', 'runs_batter', '{} Runs vs teams'.format(name), d3)
+                    #phase wise runs
+                    powerplay = data[data['over'] < 6]
+                    middleovers = data[(data['over'] >= 6) & (data['over'] > 15)]
+                    deathovers = data[(data['over'] >= 15) & (data['over'] < 20)]
+                    powerplay_runs = powerplay.groupby('batter')['runs_batter'].sum().reset_index()
+                    middleovers_runs =  middleovers.groupby('batter')['runs_batter'].sum().reset_index()
+                    deathovers_runs =  deathovers.groupby('batter')['runs_batter'].sum().reset_index()
+                    trace1 = go.Bar(x=powerplay_runs['batter'], y=powerplay_runs['runs_batter'],name='Powerplay',text=powerplay_runs['runs_batter'],textposition='auto',textfont_size=20)
+                    trace2 = go.Bar(x=powerplay_runs['batter'], y=middleovers_runs['runs_batter'],name ='Middle overs',text=middleovers_runs['runs_batter'],textposition='auto',textfont_size=20)
+                    trace3 = go.Bar(x=powerplay_runs['batter'], y=deathovers_runs['runs_batter'],name='Death overs',text=deathovers_runs['runs_batter'],textposition='auto',textfont_size=20)
+                    data1 = [trace1,trace2,trace3]
+                    layout = go.Layout(title='Phase wise Runs')
+                    fig = go.Figure(data=data1, layout=layout)
+                    st.plotly_chart(fig)
+
+            elif available_options == 'Bowler Analysis':
+                data,w = obj.bowler_overall_wicket(name)
+                if data is None:
+                    st.error("No Data Available")
+                else:
+                    #year-year wickets
+                    d1 = w.groupby('year')['ball_no'].count().reset_index()
+                    # Economy year-year
+
+                    d3 = data.groupby('year')['runs_bowler'].sum().reset_index()
+                    d4 = data.groupby('year')['over'].count().reset_index()
+                    eco = ((d3['runs_bowler'] * 6) / d4['over']).reset_index()
+
+
+                    trace1 = go.Scatter(x=d1['year'], y=eco[0],name='Economy')
+                    trace2 = go.Scatter(x=d1['year'], y=d1['ball_no'],name='Wickets')
+
+                    data1 = [trace1, trace2]
+                    fig = go.Figure(data=data1,layout=go.Layout(title='Economy and Wickets year - year'))
+                    st.plotly_chart(fig)
+
+                    #wicket type
+
+                    d2 = w.groupby('wicket_kind')['ball_no'].count().reset_index()
+                    pie_plot('wicket_kind','ball_no','{} wickets kind'.format(name),d2)
+
+                    #Teams played for
+                    d2 = data['bowling_team'].unique()
+                    teams_played_for = d2.dropna().unique().tolist()
+                    st.write('Played for : \n')
+                    st.write(teams_played_for)
+                    # POTM Count
+                    st.write('Player of the match won: {} POTM'.format(obj.count_player_of_the_match(name)))
+                    #wickets vs teams
+                    d3 = w.groupby('batting_team')['over'].count().reset_index()
+                    bar_plot('batting_team', 'over', '{} wickets vs teams'.format(name), d3)
+
+                    #phasewise wickets
+                    powerplay = w[w['over'] < 6]
+                    middleovers = w[(w['over'] >= 6) & (w['over'] < 15)]
+                    deathovers = w[(w['over'] >= 15) & (w['over'] < 20)]
+                    powerplay_runs = powerplay.groupby('bowler')['over'].count().reset_index()
+                    middleovers_runs = middleovers.groupby('bowler')['over'].count().reset_index()
+                    deathovers_runs = deathovers.groupby('bowler')['over'].count().reset_index()
+                    trace1 = go.Bar(x=powerplay_runs['bowler'], y=powerplay_runs['over'], name='Powerplay',text=powerplay_runs['over'],textposition='auto',textfont_size=20)
+                    trace2 = go.Bar(x=powerplay_runs['bowler'], y=middleovers_runs['over'], name='Middle overs',text=middleovers_runs['over'],textposition='auto',textfont_size=20)
+                    trace3 = go.Bar(x=powerplay_runs['bowler'], y=deathovers_runs['over'], name='Death overs',text=deathovers_runs['over'],textposition='auto',textfont_size=20)
+                    data1 = [trace1, trace2, trace3]
+                    layout = go.Layout(title='Phase wise wickets',barmode='group')
+                    fig = go.Figure(data=data1, layout=layout)
+                    st.plotly_chart(fig)
+
+
+    else:
+
+        if available_options == 'Batter vs Bowler':
+            batter = st.selectbox('Select Batter', batters)
+            bowler = st.selectbox('Select Bowler', bowlers)
+            btn = st.button('Start Analyzing')
+            if batter == bowler:
+                st.write("Enter different players")
             else:
 
+                data = obj.batter_vs_bowler(batter, bowler)
+                if data is None:
+                    st.write("{} has not faced {}".format(batter, bowler))
 
-                # runs each year
-                d1 = data.groupby('year')['runs_batter'].sum().reset_index()
-
-
-                #wickets
-                d2 = data[(data['bowler_wicket'] == 1) & (data['valid_ball'] == 1)]
-                d2 = d2.groupby('year')['over'].count().reset_index()
-
-                #strike rate
-                d3 = data.groupby('year')['runs_batter'].sum().reset_index()
-                d4 = data.groupby('year')['over'].count().reset_index()
-                d5 = data.groupby('year')['runs_bowler'].sum().reset_index()
-                strike_rate = ((d3['runs_batter'] / d4['over']) * 100).reset_index()
-                eco = ((d5['runs_bowler'] * 6) / d4['over']).reset_index()
+                else:
 
 
-                trace1 = go.Scatter(x=d2['year'], y=d2['over'], name='OUT',mode='markers')
-                trace2 = go.Scatter(x=d1['year'], y=d1['runs_batter'], name='Total RUNS',mode='lines+markers')
-                trace3 = go.Scatter(x=d1['year'], y= strike_rate[0],name = 'strike_rate',mode='lines+markers')
-                trace4 = go.Scatter(x=d1['year'],y=eco[0],name='Economy',mode='lines+markers')
-                data1 = [trace1, trace2,trace3,trace4]
-                fig = go.Figure(data=data1, layout=go.Layout(title='{} vs {} Battle'.format(batter,bowler)))
-                st.plotly_chart(fig)
+                    # runs each year
+                    d1 = data.groupby('year')['runs_batter'].sum().reset_index()
 
 
-    elif available_options == 'Team1 vs Team2':
-        team1 = st.selectbox('Select team1', teams)
-        team2 = st.selectbox('Select team2', teams)
-        team1 = str(team1)
-        team2 = str(team2)
-        btn = st.button('Start Analyzing')
-        if btn and team1 == team2:
-            st.write("Enter different teams")
-        if btn and team1 != team2:
+                    #wickets
+                    d2 = data[(data['bowler_wicket'] == 1) & (data['valid_ball'] == 1)]
+                    d2 = d2.groupby('year')['over'].count().reset_index()
 
-            t1_c, t2_c ,data = obj.t1_vs_t2(team1, team2)
-            st.write("{} ({}) - {} ({}) ".format(team1,t1_c,t2_c,team2))
+                    #strike rate
+                    d3 = data.groupby('year')['runs_batter'].sum().reset_index()
+                    d4 = data.groupby('year')['over'].count().reset_index()
+                    d5 = data.groupby('year')['runs_bowler'].sum().reset_index()
+                    strike_rate = ((d3['runs_batter'] / d4['over']) * 100).reset_index()
+                    eco = ((d5['runs_bowler'] * 6) / d4['over']).reset_index()
 
-            if data is None:
-                st.error("No Data Available")
-            else:
-                #Head to Head Records
-                d2 = [go.Pie(values=[t1_c,t2_c], labels=[team1,team2])]
-                fig = go.Figure(data=d2, layout=go.Layout(title='{} vs {}'.format(team1,team2)))
-                fig.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig, width='stretch')
 
-                data = data.drop_duplicates(['match_id'],keep='first')
-                d = data.groupby(['batting_team', 'toss_decision', ])['match_won_by'].count()
-                d = d.reset_index()
-                fig = px.sunburst(d,path=['batting_team','toss_decision'],values='match_won_by',
-                                  title='match_won_by bat first or bat second'
-                                  )
-                st.plotly_chart(fig, width='stretch')
+                    trace1 = go.Scatter(x=d2['year'], y=d2['over'], name='OUT',mode='markers')
+                    trace2 = go.Scatter(x=d1['year'], y=d1['runs_batter'], name='Total RUNS',mode='lines+markers')
+                    trace3 = go.Scatter(x=d1['year'], y= strike_rate[0],name = 'strike_rate',mode='lines+markers')
+                    trace4 = go.Scatter(x=d1['year'],y=eco[0],name='Economy',mode='lines+markers')
+                    data1 = [trace1, trace2,trace3,trace4]
+                    fig = go.Figure(data=data1, layout=go.Layout(title='{} vs {} Battle'.format(batter,bowler)))
+                    st.plotly_chart(fig)
 
-                trophies = df.drop_duplicates(['year'], keep='last')
-                trophies = trophies[trophies['year'] < 2026].reset_index()
-                data1 = trophies[(trophies['match_won_by'] == team1) | (trophies['match_won_by'] == team2)]
-                d1 = data1.groupby('match_won_by')['match_id'].count().reset_index()
 
-                bar_plot(x='match_won_by',y='match_id',title1='Trophies won by {} and {}'.format(team1,team2),df1=d1)
+        elif available_options == 'Team1 vs Team2':
+            team1 = st.selectbox('Select team1', teams)
+            team2 = st.selectbox('Select team2', teams)
+            team1 = str(team1)
+            team2 = str(team2)
+            btn = st.button('Start Analyzing')
+            if btn and team1 == team2:
+                st.write("Enter different teams")
+            if btn and team1 != team2:
 
-text = st.chat_input("Enter feedback")
+                t1_c, t2_c ,data = obj.t1_vs_t2(team1, team2)
+                st.write("{} ({}) - {} ({}) ".format(team1,t1_c,t2_c,team2))
 
-if text:
-    with open('feedback.txt','a') as f:
-        f.write(text)
+                if data is None:
+                    st.error("No Data Available")
+                else:
+                    #Head to Head Records
+                    d2 = [go.Pie(values=[t1_c,t2_c], labels=[team1,team2])]
+                    fig = go.Figure(data=d2, layout=go.Layout(title='{} vs {}'.format(team1,team2)))
+                    fig.update_traces(textposition='inside', textinfo='percent+label')
+                    st.plotly_chart(fig, width='stretch')
+
+                    data = data.drop_duplicates(['match_id'],keep='first')
+                    d = data.groupby(['batting_team', 'toss_decision', ])['match_won_by'].count()
+                    d = d.reset_index()
+                    fig = px.sunburst(d,path=['batting_team','toss_decision'],values='match_won_by',
+                                      title='match_won_by bat first or bat second'
+                                      )
+                    st.plotly_chart(fig, width='stretch')
+
+                    trophies = df.drop_duplicates(['year'], keep='last')
+                    trophies = trophies[trophies['year'] < 2026].reset_index()
+                    data1 = trophies[(trophies['match_won_by'] == team1) | (trophies['match_won_by'] == team2)]
+                    d1 = data1.groupby('match_won_by')['match_id'].count().reset_index()
+
+                    bar_plot(x='match_won_by',y='match_id',title1='Trophies won by {} and {}'.format(team1,team2),df1=d1)
+
+    text = st.chat_input("Enter feedback")
+
+    if text:
+        with open('feedback.txt','a') as f:
+            f.write(text)
