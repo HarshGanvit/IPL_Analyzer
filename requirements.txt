@@ -1,7 +1,6 @@
 streamlit
 numpy
 pandas
-pickle
 scikit-learn==1.6.1
 plotly
 seaborn
