@@ -1,21 +1,11 @@
-import pandas as pd
-import streamlit as st
-import numpy as np
-from plotly import colors
-
-from streamlit.elements.widgets import selectbox
-
-from logic import ipl
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-import plotly.express as px
 import pickle
 
-import sklearn
-import zipfile
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
 
-
-
+from logic import ipl
 
 obj = ipl()
 
@@ -53,43 +43,11 @@ def bar_plot(x,y,title1,df1):
     return st.plotly_chart(fig)
 data_cleaning()
 st.sidebar.title("IPL Analyzer")
-
-
-options = [
-    'Batter Analysis',
-    'Batter vs Bowler',
-    'Bowler Analysis',
-    'Team1 vs Team2'
-]
-
-batters = sorted(df['batter'].dropna().unique())
-bowlers = sorted(df['bowler'].dropna().unique())
-
-teams = sorted(df['batting_team'].unique())
-
-
-single_player_options = [
-    'Batter Analysis',
-
-    'Bowler Analysis',
-
-]
-
-
-models = st.sidebar.selectbox('Select', ['WIN Predictor','Data Analysis'])
-if models == 'WIN Predictor':
-    @st.cache_resource(show_spinner=False)
-    def load_model():
-        with open('pipe3.pkl', 'rb') as f:
-            return pickle.load(f)
-
-
-    pipe = load_model()
-    teams = [
+c_teams = [
         'Kolkata Knight Riders', 'Chennai Super Kings', 'Punjab Kings', 'Rajasthan Royals', 'Sunrisers Hyderabad',
         'Delhi Capitals', 'Lucknow Super Giants', 'Gujarat Titans', 'Royal Challengers Bengaluru', 'Mumbai Indians'
     ]
-    venue = ['Arun Jaitley Stadium',
+venue = ['Arun Jaitley Stadium',
  'Barabati Stadium',
  'Barsapara Cricket Stadium, Guwahati',
  'Bharat Ratna Shri Atal Bihari Vajpayee Ekana Cricket Stadium, Lucknow',
@@ -127,11 +85,43 @@ if models == 'WIN Predictor':
  'Vidarbha Cricket Association Stadium, Jamtha',
  'Wankhede Stadium',
  'Zayed Cricket Stadium, Abu Dhabi']
+
+options = [
+    'Batter Analysis',
+    'Batter vs Bowler',
+    'Bowler Analysis',
+    'Team1 vs Team2'
+]
+
+batters = sorted(df['batter'].dropna().unique())
+bowlers = sorted(df['bowler'].dropna().unique())
+
+teams = sorted(df['batting_team'].unique())
+
+
+single_player_options = [
+    'Batter Analysis',
+
+    'Bowler Analysis',
+
+]
+
+
+models = st.sidebar.selectbox('Select', ['WIN Predictor','Score Predictor','Data Analysis'])
+if models == 'WIN Predictor':
+    @st.cache_resource(show_spinner=False)
+    def load_model():
+        with open('LogisticRegression.pkl', 'rb') as f:
+            return pickle.load(f)
+
+
+    pipe = load_model()
+
     col1, col2 = st.columns(2)
     with col1:
-        team1 = st.selectbox('Batting Team',sorted(teams))
+        team1 = st.selectbox('Batting Team',sorted(c_teams))
     with col2:
-        team2 = st.selectbox('Bowling Team',sorted(teams))
+        team2 = st.selectbox('Bowling Team',sorted(c_teams))
 
     if team1 == team2:
         st.error("Choose Different Teams")
@@ -186,6 +176,42 @@ if models == 'WIN Predictor':
             else:
                 st.write("{}- {}%".format(team1,round(result[0][1] *100,2) ))
                 st.write("{}- {}%".format(team2, round(result[0][0] * 100,2) ))
+elif models == 'Score Predictor':
+    @st.cache_resource(show_spinner=False)
+    def load_model():
+        with open('runs_predict.pkl', 'rb') as f:
+            return pickle.load(f)
+    pipe = load_model()
+    col1, col2 = st.columns(2)
+    with col1:
+        team1 = st.selectbox('Batting Team',sorted(c_teams))
+    with col2:
+        team2 = st.selectbox('Bowling Team',sorted(c_teams))
+    venue = st.selectbox('Select Venue',sorted(venue))
+    col3, col4 ,col5,col6= st.columns(4)
+    with col3:
+        score = st.number_input('Score',step=1,min_value=0)
+    with col4:
+        overs = st.number_input('Overs Bowled',step=1,max_value=19)
+    with col5:
+        balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=1)
+    with col6:
+        wickets = st.number_input('Wickets',step=1,max_value=10)
+    balls_bowled = ((overs-1)*6) +balls
+
+    btn = st.button('Prediction  Score ')
+    if btn:
+        data = pd.DataFrame({
+            'bowling_team':[team2],
+            'batting_team':[team1],
+            'team_runs' :[score],
+            'team_wicket':[wickets],
+            'team_balls':[balls],
+            'venue':[venue]
+        })
+
+        result = pipe.predict(data)
+        st.subheader('Predicted Score : {}'.format(int(result[0])))
 else:
 
     available_options = st.sidebar.selectbox('Select', options)
