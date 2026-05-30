@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from logic import ipl
-
+import zipfile
 obj = ipl()
 
 df = obj.df
@@ -177,10 +177,16 @@ if models == 'WIN Predictor':
                 st.write("{}- {}%".format(team1,round(result[0][1] *100,2) ))
                 st.write("{}- {}%".format(team2, round(result[0][0] * 100,2) ))
 elif models == 'Score Predictor':
-    @st.cache_resource(show_spinner=False)
+    @st.cache_data(show_spinner=False)
     def load_model():
-        with open('runs_predict.pkl', 'rb') as f:
-            return pickle.load(f)
+        zip_path = 'randomforestregressor_predictscore.zip'
+        filename = 'randomforestregressor_predictscore.pkl'
+
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            with z.open(filename) as f:
+                df = pickle.load(f)
+
+        return df
     pipe = load_model()
     col1, col2 = st.columns(2)
     with col1:
@@ -194,7 +200,7 @@ elif models == 'Score Predictor':
     with col4:
         overs = st.number_input('Overs Bowled',step=1,max_value=19)
     with col5:
-        balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=1)
+        balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=0)
     with col6:
         wickets = st.number_input('Wickets',step=1,max_value=10)
     balls_bowled = ((overs-1)*6) +balls
@@ -211,7 +217,7 @@ elif models == 'Score Predictor':
         })
 
         result = pipe.predict(data)
-        st.subheader('Predicted Score : {}'.format(int(result[0])))
+        st.subheader('Predicted Score : {} to {}'.format(int(result[0]),int(result[0])+10))
 else:
 
     available_options = st.sidebar.selectbox('Select', options)
