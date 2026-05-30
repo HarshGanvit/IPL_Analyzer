@@ -152,7 +152,7 @@ if models == 'WIN Predictor':
         else:
             runs_left = target - score
             wickets_left = 10 - wickets
-            balls_left = (120 - (overs* 6) - balls)
+            balls_left = (120 - (overs * 6) - balls)
             crr =  (score * 6)/ (120 -balls_left)
             rrr = (runs_left*6) / balls_left
 
@@ -198,26 +198,31 @@ elif models == 'Score Predictor':
     with col3:
         score = st.number_input('Score',step=1,min_value=0)
     with col4:
-        overs = st.number_input('Overs Bowled',step=1,max_value=19)
+        overs = st.number_input('Overs Bowled',step=1,max_value=19,min_value=0)
     with col5:
         balls = st.number_input('Balls Bowled',step=1,max_value=6,min_value=0)
     with col6:
-        wickets = st.number_input('Wickets',step=1,max_value=10)
-    balls_bowled = ((overs-1)*6) +balls
+        wickets = st.number_input('Wickets',step=1,max_value=10,min_value=0)
+    balls_bowled = (overs*6) +balls
 
     btn = st.button('Prediction  Score ')
     if btn:
-        data = pd.DataFrame({
-            'bowling_team':[team2],
-            'batting_team':[team1],
-            'team_runs' :[score],
-            'team_wicket':[wickets],
-            'team_balls':[balls],
-            'venue':[venue]
-        })
+        if team1 == team2:
+            st.error("Choose Different Teams")
+        elif (balls == 0)  & (overs == 0):
+            st.error("At least one ball should be bowled in the match")
+        else:
+            data = pd.DataFrame({
+                'bowling_team':[team2],
+                'batting_team':[team1],
+                'team_runs' :[score],
+                'team_wicket':[wickets],
+                'team_balls':[balls_bowled],
+                'venue':[venue]
+            })
 
-        result = pipe.predict(data)
-        st.subheader('Predicted Score : {} to {}'.format(int(result[0]),int(result[0])+10))
+            result = pipe.predict(data)
+            st.subheader('Predicted Score : {} to {}'.format(int(result[0]),int(result[0])+10))
 else:
 
     available_options = st.sidebar.selectbox('Select', options)
