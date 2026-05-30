@@ -179,14 +179,8 @@ if models == 'WIN Predictor':
 elif models == 'Score Predictor':
     @st.cache_data(show_spinner=False)
     def load_model():
-        zip_path = 'randomforestregressor_predictscore.zip'
-        filename = 'randomforestregressor_predictscore.pkl'
-
-        with zipfile.ZipFile(zip_path, 'r') as z:
-            with z.open(filename) as f:
-                df = pickle.load(f)
-
-        return df
+        with open('randomforestregressor_predictscore.pkl', 'rb') as f:
+            return pickle.load(f)
     pipe = load_model()
     col1, col2 = st.columns(2)
     with col1:
